@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>炼丹炉 · 个人博客</title>
+  <meta name="description" content="从 GitHub 仓库读取 Markdown 的纯 HTML 博客。" />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --panel: #f6f8fa;
+      --text: #1f2328;
+      --muted: #59636e;
+      --link: #0969da;
+      --code-bg: #f6f8fa;
+      --border: #d0d7de;
+      --active: #ddf4ff;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0d1117;
+        --panel: #161b22;
+        --text: #e6edf3;
+        --muted: #9da7b3;
+        --link: #58a6ff;
+        --code-bg: #161b22;
+        --border: #30363d;
+        --active: #1f6feb33;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 15px/1.7 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    a { color: var(--link); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .layout {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      min-height: 100vh;
+    }
+    .sidebar {
+      border-right: 1px solid var(--border);
+      background: var(--panel);
+      padding: 18px 12px 24px;
+      overflow: auto;
+    }
+    .brand {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0 8px 6px;
+    }
+    .meta {
+      color: var(--muted);
+      font-size: 12px;
+      margin: 0 8px 12px;
+      word-break: break-all;
+    }
+    .tree-root,
+    .tree-root ul {
+      list-style: none;
+      margin: 0;
+      padding-left: 14px;
+    }
+    .tree-root { padding-left: 0; }
+    .tree-folder > details > summary {
+      cursor: pointer;
+      user-select: none;
+      color: var(--text);
+      padding: 3px 6px;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    .tree-file {
+      padding: 2px 0;
+      font-size: 13px;
+      color: var(--muted);
+      word-break: break-all;
+    }
+    .tree-file a {
+      display: inline-block;
+      padding: 3px 6px;
+      border-radius: 6px;
+      color: var(--link);
+    }
+    .tree-file a.active {
+      background: var(--active);
+      text-decoration: none;
+      color: var(--text);
+    }
+    .main {
+      padding: 24px 28px 64px;
+      overflow: auto;
+    }
+    .title { margin: 0 0 8px; }
+    .path {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 16px;
+      word-break: break-all;
+    }
+    article img { max-width: 100%; }
+    article pre {
+      background: var(--code-bg);
+      padding: 12px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      overflow-x: auto;
+    }
+    article code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 0.92em;
+    }
+    article :not(pre) > code {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1px 5px;
+    }
+    .tip {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      color: var(--muted);
+      background: color-mix(in srgb, var(--code-bg) 65%, transparent);
+    }
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar {
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
+        max-height: 42vh;
+      }
+      .main { padding: 20px 16px 40px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">加载中...</div>
+
+  <script>
+    const CONFIG = {
+      owner: "Autunomy",
+      repo: "lian-dan-lu",
+      branch: "main",
+      docsDir: "AI"
+    };
+
+    const app = document.getElementById("app");
+    const STATE = {
+      tree: [],
+      markdownFiles: []
+    };
+
+    marked.setOptions({
+      gfm: true,
+      breaks: false
+    });
+
+    function escapeHTML(str) {
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    async function fetchJSON(url) {
+      const res = await fetch(url, {
+        headers: { Accept: "application/vnd.github+json" }
+      });
+      if (!res.ok) {
+        const err = new Error("请求 GitHub 失败: " + res.status);
+        err.status = res.status;
+        throw err;
+      }
+      return res.json();
+    }
+
+    async function fetchText(url) {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("读取文章失败: " + res.status);
+      return res.text();
+    }
+
+    function decodeBase64Utf8(base64) {
+      const binary = atob(base64.replace(/\n/g, ""));
+      const bytes = Uint8Array.from(binary, function(c) { return c.charCodeAt(0); });
+      return new TextDecoder("utf-8").decode(bytes);
+    }
+
+    function getHashPath(path) {
+      return "#/" + encodeURIComponent(path);
+    }
+
+    function encodePath(path) {
+      return path.split("/").map(function(part) { return encodeURIComponent(part); }).join("/");
+    }
+
+    function compareText(a, b) {
+      return a.localeCompare(b, "zh-Hans-CN");
+    }
+
+    function buildTree(paths) {
+      const root = { name: "", type: "dir", path: "", children: [] };
+      const dirMap = { "": root };
+
+      paths.forEach(function(path) {
+        const segments = path.split("/");
+        let currentPath = "";
+        for (let i = 0; i < segments.length; i += 1) {
+          const name = segments[i];
+          const parentPath = currentPath;
+          currentPath = currentPath ? currentPath + "/" + name : name;
+          const isFile = i === segments.length - 1;
+          if (isFile) {
+            const parent = dirMap[parentPath];
+            parent.children.push({
+              name: name,
+              type: "file",
+              path: currentPath
+            });
+          } else if (!dirMap[currentPath]) {
+            const parent = dirMap[parentPath];
+            const node = {
+              name: name,
+              type: "dir",
+              path: currentPath,
+              children: []
+            };
+            dirMap[currentPath] = node;
+            parent.children.push(node);
+          }
+        }
+      });
+
+      function sortNode(node) {
+        if (node.type !== "dir") return;
+        node.children.sort(function(a, b) {
+          if (a.type !== b.type) return a.type === "dir" ? -1 : 1;
+          return compareText(a.name, b.name);
+        });
+        node.children.forEach(sortNode);
+      }
+
+      sortNode(root);
+      return root.children;
+    }
+
+    async function loadRepoTree() {
+      const treeUrl = "https://api.github.com/repos/" + CONFIG.owner + "/" + CONFIG.repo +
+        "/git/trees/" + encodeURIComponent(CONFIG.branch) + "?recursive=1";
+      const data = await fetchJSON(treeUrl);
+      const blobs = (data.tree || []).filter(function(node) { return node.type === "blob"; });
+      STATE.tree = buildTree(blobs.map(function(node) { return node.path; }));
+      STATE.markdownFiles = blobs
+        .filter(function(node) { return node.path.toLowerCase().endsWith(".md"); })
+        .map(function(node) { return node.path; });
+    }
+
+    async function getMarkdownByPath(path) {
+      const detailUrl = "https://api.github.com/repos/" + CONFIG.owner + "/" + CONFIG.repo +
+        "/contents/" + encodePath(path) +
+        "?ref=" + encodeURIComponent(CONFIG.branch);
+      const data = await fetchJSON(detailUrl);
+      if (data.content) return decodeBase64Utf8(data.content);
+      if (data.download_url) return fetchText(data.download_url);
+      throw new Error("无法解析文章内容");
+    }
+
+    function renderTree(nodes, selectedPath) {
+      return "<ul class='tree-root'>" + nodes.map(function(node) {
+        if (node.type === "dir") {
+          return "<li class='tree-folder'><details open><summary>" + escapeHTML(node.name) +
+            "</summary>" + renderTree(node.children, selectedPath) + "</details></li>";
+        }
+        const isMd = node.path.toLowerCase().endsWith(".md");
+        if (!isMd) return "<li class='tree-file'>" + escapeHTML(node.name) + "</li>";
+        const activeClass = node.path === selectedPath ? "active" : "";
+        return "<li class='tree-file'><a class='" + activeClass + "' href='" + getHashPath(node.path) +
+          "'>" + escapeHTML(node.name) + "</a></li>";
+      }).join("") + "</ul>";
+    }
+
+    function renderLayout(mainHTML, selectedPath) {
+      const repoText = CONFIG.owner + "/" + CONFIG.repo + "@" + CONFIG.branch;
+      app.innerHTML = [
+        "<div class='layout'>",
+        "<aside class='sidebar'>",
+        "<p class='brand'>仓库文件树</p>",
+        "<p class='meta'>", escapeHTML(repoText), "</p>",
+        STATE.tree.length
+          ? renderTree(STATE.tree, selectedPath)
+          : "<div class='tip'>没有读取到仓库文件。</div>",
+        "</aside>",
+        "<main class='main'>", mainHTML, "</main>",
+        "</div>"
+      ].join("");
+    }
+
+    function renderHome() {
+      const mdCount = STATE.markdownFiles.length;
+      const mainHTML = [
+        "<h1 class='title'>炼丹炉 · 个人博客</h1>",
+        "<p class='path'>请从左侧目录树选择一个 Markdown 文件。</p>",
+        "<div class='tip'>当前扫描到 <strong>", String(mdCount), "</strong> 个 Markdown 文件。</div>"
+      ].join("");
+      renderLayout(mainHTML, "");
+    }
+
+    function renderPost(path, html) {
+      const title = path.split("/").pop().replace(/\.md$/i, "");
+      const mainHTML = [
+        "<h1 class='title'>", escapeHTML(title), "</h1>",
+        "<div class='path'>", escapeHTML(path), "</div>",
+        "<article>", html, "</article>"
+      ].join("");
+      renderLayout(mainHTML, path);
+    }
+
+    function renderError(err) {
+      const statusText = err && err.status ? "（HTTP " + err.status + "）" : "";
+      const extra = err && err.status === 404
+        ? "常见原因：仓库是私有仓库，或远程分支里还没有推送对应 Markdown 文件。"
+        : "请确认仓库公开可访问，或稍后重试。";
+      const mainHTML = [
+        "<h1 class='title'>加载失败</h1>",
+        "<div class='tip'>", escapeHTML((err.message || String(err)) + statusText), "</div>",
+        "<p class='path'>", escapeHTML(extra), "</p>",
+        "<a href='#/'>返回首页</a>"
+      ].join("");
+      renderLayout(mainHTML, "");
+    }
+
+    function readHashPath() {
+      const raw = location.hash.replace(/^#\/?/, "");
+      if (!raw) return "";
+      return decodeURIComponent(raw);
+    }
+
+    async function router() {
+      try {
+        if (!STATE.tree.length) {
+          await loadRepoTree();
+        }
+        const path = readHashPath();
+        if (!path) {
+          renderHome();
+          return;
+        }
+        if (!path.toLowerCase().endsWith(".md")) {
+          throw new Error("当前只支持打开 Markdown 文件");
+        }
+        if (STATE.markdownFiles.indexOf(path) < 0) {
+          throw new Error("未找到文件: " + path);
+        }
+        const md = await getMarkdownByPath(path);
+        const html = marked.parse(md);
+        renderPost(path, html);
+      } catch (err) {
+        renderError(err);
+      }
+    }
+
+    window.addEventListener("hashchange", function() { router(); });
+    router();
+  </script>
+</body>
+</html>
