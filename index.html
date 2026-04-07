@@ -6,8 +6,11 @@
   <title>炼丹炉 · 个人博客</title>
   <meta name="description" content="从 GitHub 仓库读取 Markdown 的纯 HTML 博客。" />
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link id="hljs-theme" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
   <style>
-    :root {
+    :root,
+    html[data-theme="light"] {
       --bg: #ffffff;
       --panel: #f6f8fa;
       --text: #1f2328;
@@ -16,19 +19,18 @@
       --code-bg: #f6f8fa;
       --border: #d0d7de;
       --active: #ddf4ff;
+      --content-font-size: 17px;
     }
 
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #0d1117;
-        --panel: #161b22;
-        --text: #e6edf3;
-        --muted: #9da7b3;
-        --link: #58a6ff;
-        --code-bg: #161b22;
-        --border: #30363d;
-        --active: #1f6feb33;
-      }
+    html[data-theme="dark"] {
+      --bg: #0d1117;
+      --panel: #161b22;
+      --text: #e6edf3;
+      --muted: #9da7b3;
+      --link: #58a6ff;
+      --code-bg: #161b22;
+      --border: #30363d;
+      --active: #1f6feb33;
     }
 
     * { box-sizing: border-box; }
@@ -37,28 +39,56 @@
       background: var(--bg);
       color: var(--text);
       font: 15px/1.7 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      height: 100vh;
+      overflow: hidden;
     }
     a { color: var(--link); text-decoration: none; }
     a:hover { text-decoration: underline; }
     .layout {
       display: grid;
-      grid-template-columns: 300px 1fr;
-      min-height: 100vh;
+      grid-template-columns: 300px 260px 1fr;
+      height: 100vh;
+    }
+    .layout.toc-collapsed {
+      grid-template-columns: 300px 56px 1fr;
     }
     .sidebar {
       border-right: 1px solid var(--border);
       background: var(--panel);
       padding: 18px 12px 24px;
       overflow: auto;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
     }
+    .sidebar::-webkit-scrollbar { display: none; }
     .brand {
-      font-size: 16px;
+      font-size: 27px;
       font-weight: 600;
       margin: 0 8px 6px;
     }
+    .sidebar-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 0 8px 6px;
+      gap: 8px;
+    }
+    .theme-btn {
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 4px 8px;
+      font-size: 18px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .theme-btn:hover {
+      background: var(--active);
+    }
     .meta {
       color: var(--muted);
-      font-size: 12px;
+      font-size: 18px;
       margin: 0 8px 12px;
       word-break: break-all;
     }
@@ -75,11 +105,11 @@
       color: var(--text);
       padding: 3px 6px;
       border-radius: 6px;
-      font-size: 13px;
+      font-size: 22.5px;
     }
     .tree-file {
       padding: 2px 0;
-      font-size: 13px;
+      font-size: 22.5px;
       color: var(--muted);
       word-break: break-all;
     }
@@ -94,10 +124,75 @@
       text-decoration: none;
       color: var(--text);
     }
+    .toc-panel {
+      border-right: 1px solid var(--border);
+      background: var(--panel);
+      padding: 14px 10px 18px;
+      overflow: auto;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .toc-panel::-webkit-scrollbar { display: none; }
+    .toc-panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin: 0 6px 10px;
+    }
+    .toc-panel-title {
+      margin: 0;
+      font-size: 16px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .toc-toggle-btn {
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 2px 7px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .toc-toggle-btn:hover { background: var(--active); }
+    .toc-panel-content.hidden { display: none; }
+    .layout.toc-collapsed .toc-panel {
+      padding-left: 6px;
+      padding-right: 6px;
+    }
+    .layout.toc-collapsed .toc-panel-title {
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      letter-spacing: 2px;
+    }
+    .layout.toc-collapsed .toc-panel-head {
+      flex-direction: column;
+      margin-top: 6px;
+    }
     .main {
       padding: 24px 28px 64px;
       overflow: auto;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
     }
+    .main::-webkit-scrollbar { display: none; }
+    .content-toolbar {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .font-btn {
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 4px 8px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .font-btn:hover { background: var(--active); }
     .title { margin: 0 0 8px; }
     .path {
       color: var(--muted);
@@ -105,6 +200,7 @@
       margin-bottom: 16px;
       word-break: break-all;
     }
+    article { font-size: var(--content-font-size); }
     article img { max-width: 100%; }
     article pre {
       background: var(--code-bg);
@@ -123,6 +219,13 @@
       border-radius: 6px;
       padding: 1px 5px;
     }
+    article pre code.hljs {
+      background: transparent;
+      padding: 0;
+      border: 0;
+      font-size: 0.9em;
+      line-height: 1.6;
+    }
     .tip {
       border: 1px solid var(--border);
       border-radius: 10px;
@@ -130,12 +233,47 @@
       color: var(--muted);
       background: color-mix(in srgb, var(--code-bg) 65%, transparent);
     }
+    .toc-wrap { margin-top: 0; }
+    .toc-title {
+      margin: 0 8px 8px;
+      font-size: 16px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .toc-list {
+      list-style: none;
+      margin: 0;
+      padding: 0 0 0 6px;
+    }
+    .toc-item { margin: 2px 0; }
+    .toc-link {
+      width: 100%;
+      text-align: left;
+      border: 0;
+      background: transparent;
+      color: var(--link);
+      border-radius: 6px;
+      padding: 5px 8px;
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1.35;
+      word-break: break-all;
+    }
+    .toc-link:hover { background: var(--active); }
+    .toc-level-2 { padding-left: 18px; }
+    .toc-level-3 { padding-left: 34px; }
     @media (max-width: 900px) {
       .layout { grid-template-columns: 1fr; }
+      .layout.toc-collapsed { grid-template-columns: 1fr; }
       .sidebar {
         border-right: 0;
         border-bottom: 1px solid var(--border);
         max-height: 42vh;
+      }
+      .toc-panel {
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
+        max-height: 28vh;
       }
       .main { padding: 20px 16px 40px; }
     }
@@ -153,15 +291,70 @@
     };
 
     const app = document.getElementById("app");
+    const hljsThemeLink = document.getElementById("hljs-theme");
+    const THEME_KEY = "blog-theme";
+    const FONT_SIZE_KEY = "blog-content-font-size";
+    const TOC_COLLAPSE_KEY = "blog-toc-collapsed";
+    const HLJS_THEMES = {
+      light: "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css",
+      dark: "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css"
+    };
     const STATE = {
       tree: [],
-      markdownFiles: []
+      markdownFiles: [],
+      theme: "light",
+      contentFontSize: 17,
+      tocEntries: [],
+      tocCollapsed: false
     };
 
     marked.setOptions({
       gfm: true,
       breaks: false
     });
+
+    function getPreferredTheme() {
+      const saved = localStorage.getItem(THEME_KEY);
+      if (saved === "light" || saved === "dark") return saved;
+      return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+
+    function applyTheme(theme) {
+      STATE.theme = theme === "dark" ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", STATE.theme);
+      if (hljsThemeLink) {
+        hljsThemeLink.href = HLJS_THEMES[STATE.theme];
+      }
+    }
+
+    function toggleTheme() {
+      const next = STATE.theme === "dark" ? "light" : "dark";
+      localStorage.setItem(THEME_KEY, next);
+      applyTheme(next);
+      router();
+    }
+
+    function getPreferredFontSize() {
+      const raw = Number(localStorage.getItem(FONT_SIZE_KEY));
+      if (!Number.isFinite(raw)) return 17;
+      return Math.min(28, Math.max(14, raw));
+    }
+
+    function applyContentFontSize(size) {
+      STATE.contentFontSize = Math.min(28, Math.max(14, size));
+      document.documentElement.style.setProperty("--content-font-size", STATE.contentFontSize + "px");
+      localStorage.setItem(FONT_SIZE_KEY, String(STATE.contentFontSize));
+    }
+
+    function getTocCollapsedPreference() {
+      return localStorage.getItem(TOC_COLLAPSE_KEY) === "1";
+    }
+
+    function toggleTocCollapsed() {
+      STATE.tocCollapsed = !STATE.tocCollapsed;
+      localStorage.setItem(TOC_COLLAPSE_KEY, STATE.tocCollapsed ? "1" : "0");
+      router();
+    }
 
     function escapeHTML(str) {
       return str
@@ -275,6 +468,23 @@
       throw new Error("无法解析文章内容");
     }
 
+    function highlightCodeBlocks() {
+      if (!window.hljs) return;
+      const blocks = document.querySelectorAll("article pre code");
+      blocks.forEach(function(block) {
+        if (block.dataset.highlighted === "yes") return;
+        const hasLanguage = /language-/.test(block.className);
+        if (hasLanguage) {
+          hljs.highlightElement(block);
+        } else {
+          const result = hljs.highlightAuto(block.textContent || "");
+          block.innerHTML = result.value;
+          block.classList.add("hljs");
+        }
+        block.dataset.highlighted = "yes";
+      });
+    }
+
     function renderTree(nodes, selectedPath) {
       return "<ul class='tree-root'>" + nodes.map(function(node) {
         if (node.type === "dir") {
@@ -289,23 +499,134 @@
       }).join("") + "</ul>";
     }
 
+    function renderToc() {
+      if (!STATE.tocEntries.length) {
+        return "<div class='toc-wrap'><p class='toc-title'>文档导航</p><div class='tip'>当前文档没有可导航标题。</div></div>";
+      }
+      return [
+        "<div class='toc-wrap'>",
+        "<p class='toc-title'>文档导航</p>",
+        "<ul class='toc-list'>",
+        STATE.tocEntries.map(function(item) {
+          return "<li class='toc-item toc-level-" + String(item.level) + "'>" +
+            "<button class='toc-link' data-anchor-id='" + escapeHTML(item.id) + "' type='button'>" +
+            escapeHTML(item.text) + "</button></li>";
+        }).join(""),
+        "</ul>",
+        "</div>"
+      ].join("");
+    }
+
+    function makeAnchorId(text, index) {
+      const normalized = text
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\u4e00-\u9fa5\- ]+/g, "")
+        .replace(/\s+/g, "-");
+      return (normalized || "heading") + "-" + String(index);
+    }
+
+    function buildArticleWithToc(rawHTML) {
+      const wrapper = document.createElement("div");
+      wrapper.innerHTML = rawHTML;
+      const headings = wrapper.querySelectorAll("h1, h2, h3");
+      const toc = [];
+      headings.forEach(function(node, idx) {
+        const text = (node.textContent || "").trim();
+        if (!text) return;
+        const level = Number(node.tagName.replace("H", ""));
+        const id = makeAnchorId(text, idx + 1);
+        node.id = id;
+        toc.push({ id: id, text: text, level: level });
+      });
+      return { html: wrapper.innerHTML, toc: toc };
+    }
+
+    function renderMainToolbar() {
+      return [
+        "<div class='content-toolbar'>",
+        "<button id='font-dec' class='font-btn' type='button'>A-</button>",
+        "<button id='font-reset' class='font-btn' type='button'>", String(STATE.contentFontSize), "px</button>",
+        "<button id='font-inc' class='font-btn' type='button'>A+</button>",
+        "</div>"
+      ].join("");
+    }
+
+    function renderTocPanel() {
+      const btnText = STATE.tocCollapsed ? "展开" : "折叠";
+      const panelContentClass = STATE.tocCollapsed ? "toc-panel-content hidden" : "toc-panel-content";
+      return [
+        "<aside class='toc-panel'>",
+        "<div class='toc-panel-head'>",
+        "<p class='toc-panel-title'>标题导航</p>",
+        "<button id='toc-toggle' class='toc-toggle-btn' type='button'>", btnText, "</button>",
+        "</div>",
+        "<div class='", panelContentClass, "'>",
+        renderToc(),
+        "</div>",
+        "</aside>"
+      ].join("");
+    }
+
     function renderLayout(mainHTML, selectedPath) {
       const repoText = CONFIG.owner + "/" + CONFIG.repo + "@" + CONFIG.branch;
+      const themeLabel = STATE.theme === "dark" ? "切换白昼" : "切换黑暗";
+      const layoutClass = STATE.tocCollapsed ? "layout toc-collapsed" : "layout";
       app.innerHTML = [
-        "<div class='layout'>",
+        "<div class='", layoutClass, "'>",
         "<aside class='sidebar'>",
+        "<div class='sidebar-head'>",
         "<p class='brand'>仓库文件树</p>",
+        "<button id='theme-toggle' class='theme-btn' type='button'>", themeLabel, "</button>",
+        "</div>",
         "<p class='meta'>", escapeHTML(repoText), "</p>",
         STATE.tree.length
           ? renderTree(STATE.tree, selectedPath)
           : "<div class='tip'>没有读取到仓库文件。</div>",
         "</aside>",
-        "<main class='main'>", mainHTML, "</main>",
+        renderTocPanel(),
+        "<main id='main-content' class='main'>", renderMainToolbar(), mainHTML, "</main>",
         "</div>"
       ].join("");
+      const btn = document.getElementById("theme-toggle");
+      if (btn) btn.addEventListener("click", toggleTheme);
+      const tocToggleBtn = document.getElementById("toc-toggle");
+      if (tocToggleBtn) tocToggleBtn.addEventListener("click", toggleTocCollapsed);
+      const incBtn = document.getElementById("font-inc");
+      const decBtn = document.getElementById("font-dec");
+      const resetBtn = document.getElementById("font-reset");
+      if (incBtn) {
+        incBtn.addEventListener("click", function() {
+          applyContentFontSize(STATE.contentFontSize + 1);
+          router();
+        });
+      }
+      if (decBtn) {
+        decBtn.addEventListener("click", function() {
+          applyContentFontSize(STATE.contentFontSize - 1);
+          router();
+        });
+      }
+      if (resetBtn) {
+        resetBtn.addEventListener("click", function() {
+          applyContentFontSize(17);
+          router();
+        });
+      }
+      const tocLinks = app.querySelectorAll(".toc-link");
+      tocLinks.forEach(function(link) {
+        link.addEventListener("click", function() {
+          const targetId = link.getAttribute("data-anchor-id");
+          if (!targetId) return;
+          const target = document.getElementById(targetId);
+          if (!target) return;
+          target.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      });
     }
 
     function renderHome() {
+      STATE.tocEntries = [];
       const mdCount = STATE.markdownFiles.length;
       const mainHTML = [
         "<h1 class='title'>炼丹炉 · 个人博客</h1>",
@@ -317,15 +638,19 @@
 
     function renderPost(path, html) {
       const title = path.split("/").pop().replace(/\.md$/i, "");
+      const articleData = buildArticleWithToc(html);
+      STATE.tocEntries = articleData.toc;
       const mainHTML = [
         "<h1 class='title'>", escapeHTML(title), "</h1>",
         "<div class='path'>", escapeHTML(path), "</div>",
-        "<article>", html, "</article>"
+        "<article>", articleData.html, "</article>"
       ].join("");
       renderLayout(mainHTML, path);
+      highlightCodeBlocks();
     }
 
     function renderError(err) {
+      STATE.tocEntries = [];
       const statusText = err && err.status ? "（HTTP " + err.status + "）" : "";
       const extra = err && err.status === 404
         ? "常见原因：仓库是私有仓库，或远程分支里还没有推送对应 Markdown 文件。"
@@ -369,6 +694,9 @@
       }
     }
 
+    applyTheme(getPreferredTheme());
+    applyContentFontSize(getPreferredFontSize());
+    STATE.tocCollapsed = getTocCollapsedPreference();
     window.addEventListener("hashchange", function() { router(); });
     router();
   </script>
