@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>文档系统 UI 预览</title>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --panel: #ffffff;
+      --text: #1f2328;
+      --sub: #6b7280;
+      --primary: #3b82f6;
+      --border: #e5e7eb;
+      --active: #e0edff;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      height: 100vh;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font: 15px/1.7 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 300px 260px 1fr;
+      height: 100vh;
+    }
+    .layout.toc-collapsed { grid-template-columns: 300px 56px 1fr; }
+    .panel {
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      overflow: auto;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .panel::-webkit-scrollbar { display: none; }
+
+    .sidebar { padding: 14px 10px 18px; }
+    .sidebar-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin: 0 8px 6px;
+    }
+    .brand { font-size: 20px; font-weight: 600; }
+    .btn {
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text);
+      border-radius: 8px;
+      padding: 4px 8px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .btn:hover { background: var(--active); }
+    .meta { color: var(--sub); font-size: 12px; margin: 0 8px 12px; }
+    .tree-root, .tree-root ul { list-style: none; padding-left: 14px; }
+    .tree-root { padding-left: 0; }
+    .tree-folder > summary, .tree-file {
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .tree-folder > summary:hover, .tree-file:hover { background: #f1f5f9; }
+    .tree-file.active { background: var(--active); color: var(--primary); }
+
+    .toc-panel { padding: 14px 10px 18px; }
+    .toc-head {
+      display: flex; justify-content: space-between; align-items: center;
+      margin: 0 6px 10px;
+    }
+    .toc-title { font-size: 14px; color: var(--sub); font-weight: 700; }
+    .toc-list { list-style: none; padding: 0 0 0 6px; }
+    .toc-item { margin: 2px 0; }
+    .toc-link {
+      border: 0; background: transparent; color: var(--primary); width: 100%;
+      text-align: left; border-radius: 6px; padding: 5px 8px; font-size: 14px; cursor: pointer;
+    }
+    .toc-link:hover { background: var(--active); }
+    .lv2 { padding-left: 16px; }
+    .lv3 { padding-left: 30px; }
+    .layout.toc-collapsed .toc-list { display: none; }
+    .layout.toc-collapsed .toc-head { flex-direction: column; margin-top: 6px; }
+    .layout.toc-collapsed .toc-title { writing-mode: vertical-rl; text-orientation: mixed; letter-spacing: 2px; }
+
+    .main { display: flex; flex-direction: column; overflow: hidden; }
+    .header {
+      height: 56px; background: #fff; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; padding: 0 20px;
+      flex-shrink: 0;
+    }
+    .search {
+      width: 320px; max-width: 60%; padding: 8px 12px; border-radius: 8px;
+      border: 1px solid var(--border); background: #f9fafb; outline: none;
+    }
+    .content {
+      overflow: auto; padding: 30px 44px; -ms-overflow-style: none; scrollbar-width: none;
+    }
+    .content::-webkit-scrollbar { display: none; }
+    .article { max-width: 1200px; margin: 0 auto; }
+    h1 { font-size: 34px; margin-bottom: 20px; line-height: 1.25; }
+    h2 { margin-top: 30px; margin-bottom: 10px; }
+    h3 { margin-top: 18px; margin-bottom: 8px; }
+    p { color: var(--sub); line-height: 1.8; }
+    .code {
+      background: #0f172a; color: #e5e7eb; padding: 16px; border-radius: 10px;
+      margin: 16px 0; font: 14px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .tag {
+      display: inline-block; background: #eef2ff; color: #6366f1; padding: 4px 10px;
+      border-radius: 999px; font-size: 12px; margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="layout" class="layout">
+    <aside class="panel sidebar">
+      <div class="sidebar-head">
+        <p class="brand">仓库文件树</p>
+        <button class="btn">切换黑暗</button>
+      </div>
+      <p class="meta">Autunomy/lian-dan-lu@main</p>
+      <ul class="tree-root">
+        <li><details class="tree-folder" open><summary>AI</summary>
+          <ul><li class="tree-file">提示词工程.md</li></ul>
+        </details></li>
+        <li><details class="tree-folder" open><summary>架构</summary>
+          <ul>
+            <li class="tree-file active">DDD.md</li>
+            <li class="tree-file">第一性原理.md</li>
+          </ul>
+        </details></li>
+        <li class="tree-file">README.md</li>
+      </ul>
+    </aside>
+
+    <aside class="panel toc-panel">
+      <div class="toc-head">
+        <p class="toc-title">标题导航</p>
+        <button id="toc-toggle" class="btn">折叠</button>
+      </div>
+      <ul class="toc-list">
+        <li class="toc-item"><button class="toc-link">第一性原理</button></li>
+        <li class="toc-item lv2"><button class="toc-link">什么是第一性原理？</button></li>
+        <li class="toc-item lv2"><button class="toc-link">两种思维方式</button></li>
+        <li class="toc-item lv3"><button class="toc-link">类比推理</button></li>
+        <li class="toc-item lv3"><button class="toc-link">第一性原理推导</button></li>
+      </ul>
+    </aside>
+
+    <main class="main">
+      <header class="header">
+        <input class="search" placeholder="搜索文件..." />
+        <span>阅读模式</span>
+      </header>
+      <section class="content">
+        <article class="article">
+          <div class="tag">思维模型</div>
+          <h1>第一性原理</h1>
+          <p>这是一个预览页面，UI 已同步为你当前 index 的最新风格：三栏布局、顶部搜索、宽正文阅读区。</p>
+          <h2>什么是第一性原理？</h2>
+          <p>从最基础事实出发，而不是依赖经验或类比。</p>
+          <div class="code">基本事实 -> 推导 -> 结论</div>
+          <h2>两种思维方式</h2>
+          <h3>类比推理</h3>
+          <p>根据已有经验进行近似决策，速度快但上限受限。</p>
+          <h3>第一性原理推导</h3>
+          <p>拆解问题，回到本质变量，重新组合得到新解法。</p>
+          <div class="code">拆解 -> 约束建模 -> 重构方案</div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const layout = document.getElementById("layout");
+    const tocToggle = document.getElementById("toc-toggle");
+    tocToggle.addEventListener("click", function () {
+      layout.classList.toggle("toc-collapsed");
+      tocToggle.textContent = layout.classList.contains("toc-collapsed") ? "展开" : "折叠";
+    });
+  </script>
+</body>
+</html>

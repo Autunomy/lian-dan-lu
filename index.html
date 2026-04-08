@@ -11,14 +11,14 @@
   <style>
     :root,
     html[data-theme="light"] {
-      --bg: #ffffff;
-      --panel: #f6f8fa;
+      --bg: #f6f7fb;
+      --panel: #ffffff;
       --text: #1f2328;
-      --muted: #59636e;
-      --link: #0969da;
-      --code-bg: #f6f8fa;
-      --border: #d0d7de;
-      --active: #ddf4ff;
+      --muted: #6b7280;
+      --link: #3b82f6;
+      --code-bg: #f8fafc;
+      --border: #e5e7eb;
+      --active: #e0edff;
       --content-font-size: 17px;
     }
 
@@ -48,6 +48,7 @@
       display: grid;
       grid-template-columns: 300px 260px 1fr;
       height: 100vh;
+      background: var(--bg);
     }
     .layout.toc-collapsed {
       grid-template-columns: 300px 56px 1fr;
@@ -55,14 +56,14 @@
     .sidebar {
       border-right: 1px solid var(--border);
       background: var(--panel);
-      padding: 18px 12px 24px;
+      padding: 14px 10px 18px;
       overflow: auto;
       -ms-overflow-style: none;
       scrollbar-width: none;
     }
     .sidebar::-webkit-scrollbar { display: none; }
     .brand {
-      font-size: 27px;
+      font-size: 20px;
       font-weight: 600;
       margin: 0 8px 6px;
     }
@@ -79,7 +80,7 @@
       color: var(--text);
       border-radius: 8px;
       padding: 4px 8px;
-      font-size: 18px;
+      font-size: 13px;
       cursor: pointer;
       white-space: nowrap;
     }
@@ -88,7 +89,7 @@
     }
     .meta {
       color: var(--muted);
-      font-size: 18px;
+      font-size: 12px;
       margin: 0 8px 12px;
       word-break: break-all;
     }
@@ -105,11 +106,11 @@
       color: var(--text);
       padding: 3px 6px;
       border-radius: 6px;
-      font-size: 22.5px;
+      font-size: 14px;
     }
     .tree-file {
       padding: 2px 0;
-      font-size: 22.5px;
+      font-size: 14px;
       color: var(--muted);
       word-break: break-all;
     }
@@ -171,12 +172,47 @@
       margin-top: 6px;
     }
     .main {
-      padding: 24px 28px 64px;
-      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
       -ms-overflow-style: none;
       scrollbar-width: none;
     }
     .main::-webkit-scrollbar { display: none; }
+    .header {
+      height: 56px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      flex-shrink: 0;
+    }
+    .search {
+      width: 320px;
+      max-width: 60%;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--code-bg);
+      color: var(--text);
+      outline: none;
+    }
+    .main-body {
+      display: grid;
+      grid-template-columns: 1fr;
+      overflow: auto;
+      padding: 30px 44px;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .main-body::-webkit-scrollbar { display: none; }
+    .article {
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+    }
     .content-toolbar {
       display: flex;
       justify-content: flex-end;
@@ -193,7 +229,7 @@
       cursor: pointer;
     }
     .font-btn:hover { background: var(--active); }
-    .title { margin: 0 0 8px; }
+    .title { margin: 0 0 12px; font-size: 34px; line-height: 1.25; }
     .path {
       color: var(--muted);
       font-size: 13px;
@@ -305,7 +341,9 @@
       theme: "light",
       contentFontSize: 17,
       tocEntries: [],
-      tocCollapsed: false
+      tocCollapsed: false,
+      treeKeyword: "",
+      selectedPath: ""
     };
 
     marked.setOptions({
@@ -487,6 +525,17 @@
 
     function renderTree(nodes, selectedPath) {
       return "<ul class='tree-root'>" + nodes.map(function(node) {
+        if (STATE.treeKeyword) {
+          const needle = STATE.treeKeyword.toLowerCase();
+          const currentHit = node.name.toLowerCase().indexOf(needle) >= 0 || node.path.toLowerCase().indexOf(needle) >= 0;
+          if (node.type === "file" && !currentHit) return "";
+          if (node.type === "dir") {
+            const subtree = renderTree(node.children, selectedPath);
+            if (!currentHit && subtree === "<ul class='tree-root'></ul>") return "";
+            return "<li class='tree-folder'><details open><summary>" + escapeHTML(node.name) +
+              "</summary>" + subtree + "</details></li>";
+          }
+        }
         if (node.type === "dir") {
           return "<li class='tree-folder'><details open><summary>" + escapeHTML(node.name) +
             "</summary>" + renderTree(node.children, selectedPath) + "</details></li>";
@@ -497,6 +546,12 @@
         return "<li class='tree-file'><a class='" + activeClass + "' href='" + getHashPath(node.path) +
           "'>" + escapeHTML(node.name) + "</a></li>";
       }).join("") + "</ul>";
+    }
+
+    function renderTreeContainer(selectedPath) {
+      return STATE.tree.length
+        ? renderTree(STATE.tree, selectedPath)
+        : "<div class='tip'>没有读取到仓库文件。</div>";
     }
 
     function renderToc() {
@@ -558,7 +613,6 @@
       return [
         "<aside class='toc-panel'>",
         "<div class='toc-panel-head'>",
-        "<p class='toc-panel-title'>标题导航</p>",
         "<button id='toc-toggle' class='toc-toggle-btn' type='button'>", btnText, "</button>",
         "</div>",
         "<div class='", panelContentClass, "'>",
@@ -569,6 +623,7 @@
     }
 
     function renderLayout(mainHTML, selectedPath) {
+      STATE.selectedPath = selectedPath || "";
       const repoText = CONFIG.owner + "/" + CONFIG.repo + "@" + CONFIG.branch;
       const themeLabel = STATE.theme === "dark" ? "切换白昼" : "切换黑暗";
       const layoutClass = STATE.tocCollapsed ? "layout toc-collapsed" : "layout";
@@ -580,12 +635,16 @@
         "<button id='theme-toggle' class='theme-btn' type='button'>", themeLabel, "</button>",
         "</div>",
         "<p class='meta'>", escapeHTML(repoText), "</p>",
-        STATE.tree.length
-          ? renderTree(STATE.tree, selectedPath)
-          : "<div class='tip'>没有读取到仓库文件。</div>",
+        "<div id='tree-container'>", renderTreeContainer(STATE.selectedPath), "</div>",
         "</aside>",
         renderTocPanel(),
-        "<main id='main-content' class='main'>", renderMainToolbar(), mainHTML, "</main>",
+        "<main id='main-content' class='main'>",
+        "<header class='header'>",
+        "<input id='tree-search' class='search' placeholder='搜索文件...' value='", escapeHTML(STATE.treeKeyword), "' />",
+        "<span class='path'>阅读模式</span>",
+        "</header>",
+        "<div class='main-body'><div class='article'>", renderMainToolbar(), mainHTML, "</div></div>",
+        "</main>",
         "</div>"
       ].join("");
       const btn = document.getElementById("theme-toggle");
@@ -623,6 +682,15 @@
           target.scrollIntoView({ behavior: "smooth", block: "start" });
         });
       });
+      const searchInput = document.getElementById("tree-search");
+      if (searchInput) {
+        searchInput.addEventListener("input", function() {
+          STATE.treeKeyword = searchInput.value.trim();
+          const treeContainer = document.getElementById("tree-container");
+          if (!treeContainer) return;
+          treeContainer.innerHTML = renderTreeContainer(STATE.selectedPath);
+        });
+      }
     }
 
     function renderHome() {
